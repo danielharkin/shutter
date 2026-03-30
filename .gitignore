@@ -1,0 +1,6 @@
+node_modules/
+dist/
+*.photoslib/
+helpers/archive.db
+helpers/path.txt
+.DS_Store

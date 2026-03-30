@@ -1,0 +1,36 @@
+{
+  "name": "photo-browser",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+    "electron": "^41.1.0",
+    "exiftool-vendored": "^35.15.1",
+    "express": "^5.2.1",
+    "sqlite3": "^6.0.1"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.archive.photobrowser",
+    "mac": {
+      "category": "public.app-category.photography",
+      "target": ["dmg"],
+      "extendInfo": {
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "Photo Browser Library",
+            "CFBundleTypeRole": "Editor",
+            "LSHandlerRank": "Owner",
+            "LSItemContentTypes": ["com.archive.photoslib"],
+            "CFBundleTypeExtensions": ["photoslib"]
+          }
+        ]
+      }
+    }
+  }
+}

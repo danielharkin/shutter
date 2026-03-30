@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+    <div id="dropzone" style="display:none; position:fixed; inset:0; background:rgba(0,122,255,0.9); z-index:100000; align-items:center; justify-content:center; flex-direction:column; color:white; pointer-events:none;">
+    <div style="font-size:60px; margin-bottom:20px;">📦</div>
+    <h2 style="font-weight:900;">Drop .photoslib here to load</h2>
+</div>
+
+    <div id="top-safe"></div>
+    
+    <div id="sidebar">
+        <h3 style="padding:0 20px; font-size:11px; color:#333; letter-spacing:2px;">FOLDERS</h3>
+        <div style="padding: 10px 20px; display: flex; align-items: center; justify-content: space-between;">
+    <span style="font-size:11px; color:#555; letter-spacing:2px; font-weight:900;">LIBRARIES</span>
+<button id="btn-add-library" style="background:rgba(0,122,255,0.1); border:none; color:var(--accent); width:24px; height:24px; border-radius:50%; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; transition: background 0.2s;">+</button>
+
+</div>
+        <div id="folder-list"></div>
+    </div>
+
+    <div id="main">
+        <header>
+<div id="filter-bar">
+    <button class="btn-pill active" data-type="image">Photos</button>
+    <button class="btn-pill active" data-type="video">Videos</button>
+    <button class="btn-pill active" data-type="live">Live</button>
+    <button class="btn-pill active" data-type="shorts">Shorts</button> 
+    <button class="btn-pill active" data-type="screenshot">Screenshots</button>
+    <button class="btn-pill active" data-type="selfie">Selfies</button>
+</div>
+            <button class="btn-pill" id="btn-toggle-split">Split Map</button>
+        </header>
+
+        <div id="content-wrapper">
+            <div id="scroll-container">
+                <div id="split-map">
+                    <button id="btn-main-sat" class="map-overlay-btn">SAT</button>
+                </div>
+                <div id="grid"></div>
+            </div>
+            <div id="timeline-scrubber"></div>
+            
+            <div id="lightbox">
+                <div id="lightbox-close">✕</div>
+                <button class="nav-arrow prev">❮</button>
+                <button class="nav-arrow next">❯</button>
+                <div id="lightbox-target"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="info-panel">
+        <div id="info-ui" style="display:none">
+            <div class="section-header">Filename</div>
+            <div id="info-filename"></div>
+            
+            <div id="media-cont" class="media-card"></div>
+
+            <div class="section-header">Photo Location</div>
+            <div class="card-map">
+                <div id="mini-map"></div>
+                <div id="map-crosshair">📍</div>
+                <div id="no-loc-overlay" class="no-loc-overlay">NO IMAGE LOCATION</div>
+                <button id="btn-mini-sat" class="map-overlay-btn" style="right: 55px;">SAT</button>
+                <button id="btn-drag-loc" class="map-overlay-btn">DRAG</button>
+            </div>
+            
+            <div style="position:relative">
+                <input id="loc-search" type="search" class="input-dark" placeholder="🔍 Search Place...">
+                <div id="search-suggest"></div>
+            </div>
+            
+            <div class="input-grid">
+                <input id="ed-lat" class="input-dark" placeholder="Lat">
+                <input id="ed-lng" class="input-dark" placeholder="Lng">
+            </div>
+
+            <div class="section-header">Photo Date & Time</div>
+            <div class="date-grid">
+                <input id="d-dd" class="input-dark" placeholder="DD">
+                <input id="d-mm" class="input-dark" placeholder="MM">
+                <input id="d-yyyy" class="input-dark" placeholder="YYYY">
+            </div>
+            <div class="date-grid">
+                <input id="d-hh" class="input-dark" placeholder="HH">
+                <input id="d-min" class="input-dark" placeholder="MIN">
+                <input id="d-ss" class="input-dark" placeholder="SS">
+            </div>
+            
+            <button class="btn-action">Update Database</button>
+
+            <div class="section-header">Metadata & File</div>
+            <details id="finder-details"><summary>Finder Details</summary><div id="finder-data"></div></details>
+            <details id="iptc-details"><summary>IPTC Data</summary><div id="iptc-data"></div></details>
+            <details id="exif-details"><summary>Full Details</summary><div id="full-exif"></div></details>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
