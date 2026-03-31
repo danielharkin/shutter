@@ -228,3 +228,38 @@ details summary:hover { color: var(--accent); }
     cursor: pointer; 
     z-index: 100002; 
 }
+
+.sidebar-section {
+    margin-bottom: 24px;
+    padding: 0 10px;
+}
+
+.section-label {
+    padding: 10px 10px;
+    font-size: 10px;
+    color: #555;
+    letter-spacing: 2px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.library-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.status-text {
+    padding: 10px;
+    font-size: 11px;
+    color: var(--accent);
+    font-style: italic;
+    line-height: 1.4;
+}
+
+#generation-status:empty { display: none; }
+
+.recent-lib span {
+    opacity: 0.7;
+    font-size: 13px;
+}

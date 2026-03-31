@@ -4,6 +4,7 @@ import { initMap } from './map.js';
 import { initSidebar } from './sidebar.js';
 
 async function initApp() {
+    renderLibraryHistory();
     window.state = state; 
 
     const rows = await window.api.getYears();
@@ -41,12 +42,39 @@ async function initApp() {
         list.appendChild(btn);
     };
 
+    
+
     // 4. Populate UI now that data exists
     createBtn('All Photos', 'all', '-');
     rows.forEach(r => createBtn(r.y, r.y, r.c.toLocaleString()));
 
     state.rawAssets = await window.api.getAssets('all');
     applyFilters();
+
+    ///5. Add History Logic to the UI
+
+    async function renderLibraryHistory() {
+    // Note: This requires 'getLibraryHistory' to be added to your preload/main (Step 5)
+    const history = await window.api.getLibraryHistory?.() || [];
+    const container = document.getElementById('library-history-list');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    history.forEach(libPath => {
+        const btn = document.createElement('button');
+        btn.className = 'nav-item recent-lib';
+        const name = libPath.split('/').pop().replace('.photoslib', '');
+        btn.innerHTML = `<span>📖 ${name}</span>`;
+        
+        btn.onclick = async () => {
+            const success = await window.api.loadLibrary(libPath);
+            if (success) initApp();
+        };
+        container.appendChild(btn);
+    });
+}
+
+// Ensure you add renderLibraryHistory() to the top of your initApp() function.
 }
 
 
@@ -96,6 +124,7 @@ window.addEventListener('drop', async (e) => {
 });
 
 
+
 document.getElementById('btn-add-library').onclick = async () => {
     const result = await window.api.selectLibrary();
     if (result.success) {
@@ -116,12 +145,21 @@ document.getElementById('btn-create-library').onclick = async () => {
     }
 };
 
-// Handle real-time progress updates
+// Handle real-time progress updates with Phased Loading
 window.api.onGenerationProgress((data) => {
-    const statusEl = document.getElementById('generation-status'); // Create this element in HTML
-    if (statusEl) {
+    const statusEl = document.getElementById('generation-status');
+    if (!statusEl) return;
+
+    if (data.phase === 'discovery_complete') {
+        // TRIGGER INSTANT LOAD: Phase 1 is done, folders are in the DB
+        statusEl.innerText = "Folders discovered! Loading UI...";
+        initApp(); 
+    } else if (data.phase === 'enriching') {
+        // BACKGROUND PROGRESS: Phase 2 is running
         const percent = Math.round((data.current / data.total) * 100);
-        statusEl.innerText = `Generating Library: ${data.current} / ${data.total} (${percent}%)`;
+        statusEl.innerText = `Enriching Metadata: ${percent}% (${data.current.toLocaleString()} / ${data.total.toLocaleString()})`;
+    } else if (data.phase === 'complete') {
+        statusEl.innerText = "Library generation complete.";
+        setTimeout(() => { statusEl.innerText = ""; }, 5000);
     }
 });
-

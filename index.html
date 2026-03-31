@@ -14,17 +14,29 @@
 
     <div id="top-safe"></div>
     
-    <div id="sidebar">
-        <h3 style="padding:0 20px; font-size:11px; color:#333; letter-spacing:2px;">FOLDERS</h3>
-        <div style="padding: 10px 20px; display: flex; align-items: center; justify-content: space-between;">
-    <span style="font-size:11px; color:#555; letter-spacing:2px; font-weight:900;">LIBRARIES</span>
-<button id="btn-add-library" style="background:rgba(0,122,255,0.1); border:none; color:var(--accent); width:24px; height:24px; border-radius:50%; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; transition: background 0.2s;">+</button>
-<button id="btn-create-library">Create New Library</button>
-<div id="generation-status" style="color: #aaa; font-size: 12px; margin-top: 10px;"></div>
+<div id="sidebar">
+    <div class="sidebar-section">
+        <div class="section-label">LIBRARIES</div>
+        <div id="library-history-list" class="library-controls">
+            </div>
+        <div class="library-controls">
+            <button id="btn-add-library" class="nav-item"><span>📂 Open Library</span></button>
+            <button id="btn-create-library" class="nav-item"><span>➕ Create New</span></button>
+        </div>
+        <div id="generation-status" class="status-text"></div>
+    </div>
 
-</div>
+    <div class="sidebar-section">
         <div id="folder-list"></div>
     </div>
+</div>
+
+
+    <div class="sidebar-section">
+        <div class="section-label">FOLDERS</div>
+        <div id="folder-list"></div>
+    </div>
+</div>
 
     <div id="main">
         <header>

@@ -18,7 +18,11 @@ contextBridge.exposeInMainWorld('api', {
     updateAsset: (id, data) => ipcRenderer.invoke('update-asset', id, data),
 
     createLibrary: () => ipcRenderer.invoke('create-library'),
-    onGenerationProgress: (callback) => ipcRenderer.on('library-generation-progress', (event, data) => callback(data))
+    onGenerationProgress: (callback) => ipcRenderer.on('library-generation-progress', (event, data) => callback(data)),
+
+    getLibraryHistory: () => ipcRenderer.invoke('get-library-history')
+
+
 });
 
 //added comma

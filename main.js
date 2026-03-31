@@ -4,6 +4,8 @@ const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 const express = require('express');
 const { exiftool } = require('exiftool-vendored');
+const Store = require('electron-store');
+const store = new Store.default();
 
 
 // CONFIGURATION
@@ -15,29 +17,32 @@ function loadLibrary(libraryPath) {
     const dbFile = path.join(libraryPath, 'archive.db');
     const pathFile = path.join(libraryPath, 'path.txt');
 
+    // Requirement: The database must exist to proceed
     if (!fs.existsSync(dbFile)) return false;
 
     try {
+        // Close existing connection if switching
         if (db) db.close();
         db = new sqlite3.Database(dbFile);
         db.run('PRAGMA journal_mode = WAL;');
-        db.run('PRAGMA cache_size = -20000;');
+        db.run('PRAGMA cache_size = -20000;'); 
         DB_PATH = dbFile;
 
-        if (fs.existsSync(pathFile)) {
-            const rawPath = fs.readFileSync(pathFile, 'utf8').trim();
-            PHOTO_ROOT = path.isAbsolute(rawPath) ? rawPath : path.resolve(libraryPath, rawPath);
-        } else {
-            // New logic: Fetch the source root from the database config table
-            db.get("SELECT value FROM config WHERE key = 'photo_root'", (err, row) => {
-                if (row) {
-                    PHOTO_ROOT = row.value;
-                }
-            });
-        }
+        // Support for Phased/Robust Libraries (Database Config)
+        // We use a promise here to ensure PHOTO_ROOT is set before the UI asks for assets
+        db.get("SELECT value FROM config WHERE key = 'photo_root'", (err, row) => {
+            if (row) {
+                PHOTO_ROOT = row.value;
+            } else if (fs.existsSync(pathFile)) {
+                // Fallback for Legacy Libraries (path.txt)
+                const rawPath = fs.readFileSync(pathFile, 'utf8').trim();
+                PHOTO_ROOT = path.isAbsolute(rawPath) ? rawPath : path.resolve(libraryPath, rawPath);
+            }
+        });
+
         return true;
     } catch (e) {
-        console.error("Failed to load library:", e);
+        console.error("Failed to load library files:", e);
         return false;
     }
 }
@@ -224,3 +229,16 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
+
+function addToHistory(libPath) {
+    let history = store.get('libraryHistory') || [];
+    // Filter out duplicates and keep the most recent 5
+    history = [libPath, ...history.filter(p => p !== libPath)].slice(0, 5);
+    store.set('libraryHistory', history);
+}
+
+// UPDATE: Inside your loadLibrary function, add this line at the very end of the 'try' block:
+// addToHistory(libraryPath);
+
+// ADD: New IPC handler for the frontend to fetch this list
+ipcMain.handle('get-library-history', () => store.get('libraryHistory') || []);
