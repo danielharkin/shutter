@@ -6,6 +6,7 @@ const express = require('express');
 const { exiftool } = require('exiftool-vendored');
 const Store = require('electron-store');
 const store = new Store.default();
+const { generateLibrary } = require('./library-generator');
 
 
 // CONFIGURATION
@@ -17,36 +18,33 @@ function loadLibrary(libraryPath) {
     const dbFile = path.join(libraryPath, 'archive.db');
     const pathFile = path.join(libraryPath, 'path.txt');
 
-    // Requirement: The database must exist to proceed
     if (!fs.existsSync(dbFile)) return false;
 
     try {
-        // Close existing connection if switching
         if (db) db.close();
         db = new sqlite3.Database(dbFile);
         db.run('PRAGMA journal_mode = WAL;');
         db.run('PRAGMA cache_size = -20000;'); 
         DB_PATH = dbFile;
+        addToHistory(libraryPath);
 
-        // Support for Phased/Robust Libraries (Database Config)
-        // We use a promise here to ensure PHOTO_ROOT is set before the UI asks for assets
+        // 1. Set PHOTO_ROOT immediately from path.txt if it exists (Synchronous safety)
+        if (fs.existsSync(pathFile)) {
+            const rawPath = fs.readFileSync(pathFile, 'utf8').trim();
+            PHOTO_ROOT = path.isAbsolute(rawPath) ? rawPath : path.resolve(libraryPath, rawPath);
+        }
+
+        // 2. Then update/override from DB config if present
         db.get("SELECT value FROM config WHERE key = 'photo_root'", (err, row) => {
-            if (row) {
-                PHOTO_ROOT = row.value;
-            } else if (fs.existsSync(pathFile)) {
-                // Fallback for Legacy Libraries (path.txt)
-                const rawPath = fs.readFileSync(pathFile, 'utf8').trim();
-                PHOTO_ROOT = path.isAbsolute(rawPath) ? rawPath : path.resolve(libraryPath, rawPath);
-            }
+            if (row) PHOTO_ROOT = row.value;
         });
 
-        return true;
-    } catch (e) {
-        console.error("Failed to load library files:", e);
+        return true; // Return true here, once the DB connection is initiated
+    } catch (err) {
+        console.error("Failed to load library:", err);
         return false;
     }
 }
-
 
 // MEDIA SERVER (Express)
 
@@ -112,14 +110,12 @@ mediaApp.listen(3999, '127.0.0.1');
 // IPC HANDLERS
 
 ipcMain.handle('create-library', async (event) => {
-    // 1. Pick Source Folder (Read-Only)
     const source = await dialog.showOpenDialog({
         title: "Select Photo Source Folder (Read-Only)",
         properties: ['openDirectory']
     });
     if (source.canceled) return { success: false };
 
-    // 2. Pick Destination Folder for the new .photoslib
     const dest = await dialog.showSaveDialog({
         title: "Create New Shutter Library",
         defaultPath: "MyNewLibrary.photoslib",
@@ -127,21 +123,18 @@ ipcMain.handle('create-library', async (event) => {
     });
     if (dest.canceled) return { success: false };
 
-    const sourceDir = source.filePaths[0];
-    const outputLib = dest.filePath;
+    // Use existing variable names without 'const' if they are global, 
+    // or keep 'const' here and remove them from the top of the file.
+    const selectedSourceDir = source.filePaths[0]; 
+    const selectedOutputLib = dest.filePath;
 
-    // Start the generator (calling your new file)
-    const { generateLibrary } = require('./library-generator');
-    
     try {
-        await generateLibrary(sourceDir, outputLib, (current, total) => {
-            // Send progress updates back to the UI
-            event.sender.send('library-generation-progress', { current, total });
+        await generateLibrary(selectedSourceDir, selectedOutputLib, (data) => {
+            event.sender.send('library-generation-progress', data);
         });
         
-        // Auto-load the new library upon completion
-        const success = loadLibrary(outputLib);
-        return { success, path: outputLib };
+        const success = loadLibrary(selectedOutputLib);
+        return { success, path: selectedOutputLib };
     } catch (err) {
         console.error("Library Generation Failed:", err);
         return { success: false, error: err.message };
@@ -191,9 +184,8 @@ ipcMain.handle('get-full-exif', async (event, relPath) => {
 
 ipcMain.handle('get-years', () => {
   if (!db) return []; 
-  // Extracts the first folder name from the relative path as the category
   return new Promise(res => db.all(
-    "SELECT SUBSTR(rel_path, 1, INSTR(rel_path, '/') - 1) as y, COUNT(*) as c FROM assets GROUP BY y", 
+    "SELECT category as y, COUNT(*) as c FROM assets GROUP BY y", 
     (e, r) => res(r || [])
   ));
 });
@@ -209,8 +201,21 @@ ipcMain.handle('get-assets', (event, folder) => {
 
 ipcMain.handle('get-detailed-metadata', async (event, relativePath) => {
     const fullPath = path.join(PHOTO_ROOT, relativePath);
-    // exiftool-vendored is used here for an ad-hoc, non-indexed read
     return await exiftool.read(fullPath);
+});
+
+function addToHistory(libPath) {
+    try {
+        let history = store.get('libraryHistory') || [];
+        history = [libPath, ...history.filter(p => p !== libPath)].slice(0, 5);
+        store.set('libraryHistory', history);
+    } catch (e) {
+        console.error("History store failed:", e);
+    }
+}
+
+ipcMain.handle('get-library-history', () => {
+    return store.get('libraryHistory') || [];
 });
 
 app.whenReady().then(() => {
@@ -229,16 +234,3 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
-
-function addToHistory(libPath) {
-    let history = store.get('libraryHistory') || [];
-    // Filter out duplicates and keep the most recent 5
-    history = [libPath, ...history.filter(p => p !== libPath)].slice(0, 5);
-    store.set('libraryHistory', history);
-}
-
-// UPDATE: Inside your loadLibrary function, add this line at the very end of the 'try' block:
-// addToHistory(libraryPath);
-
-// ADD: New IPC handler for the frontend to fetch this list
-ipcMain.handle('get-library-history', () => store.get('libraryHistory') || []);
