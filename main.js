@@ -82,25 +82,6 @@ mediaApp.use('/thumb', async (req, res) => {
     } catch (e) { res.status(404).send(); }
 });
 
-ipcMain.handle('mount-portable-library', async (event, libraryPath) => {
-    const pathTxtPath = path.join(libraryPath, 'path.txt');
-    const dbPath = path.join(libraryPath, 'archive.db');
-
-    if (fs.existsSync(pathTxtPath) && fs.existsSync(dbPath)) {
-        const newRoot = fs.readFileSync(pathTxtPath, 'utf8').trim();
-        
-        // Update the global PHOTO_ROOT for the Express server
-        PHOTO_ROOT = newRoot; 
-        
-        // Close existing DB before re-assigning
-        if (db) db.close();
-        db = new sqlite3.Database(dbPath);
-
-        return { success: true, photoRoot: newRoot };
-    }
-    return { success: false, error: 'Invalid .photoslib structure' };
-});
-
 // Dynamic media handler to support library switching
 mediaApp.use('/media', (req, res) => {
     if (!PHOTO_ROOT) return res.status(404).send("No library loaded");
@@ -110,18 +91,6 @@ mediaApp.use('/media', (req, res) => {
 });
 
 mediaApp.listen(3999, '127.0.0.1');
-
-// macOS specific: handle double-clicking the .photoslib package
-app.on('open-file', (event, path) => {
-    event.preventDefault();
-    if (loadLibrary(path)) {
-        if (BrowserWindow.getAllWindows().length === 0) {
-            createWindow();
-        } else {
-            BrowserWindow.getAllWindows()[0].webContents.reload();
-        }
-    }
-});
 
 // IPC HANDLERS
 ipcMain.handle('reveal-in-finder', (event, relPath) => {
