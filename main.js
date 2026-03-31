@@ -111,20 +111,6 @@ mediaApp.use('/media', (req, res) => {
 
 mediaApp.listen(3999, '127.0.0.1');
 
-function createWindow() {
-  const win = new BrowserWindow({
-    width: 1750, height: 1100,
-    backgroundColor: '#000',
-    titleBarStyle: 'hiddenInset',
-    webPreferences: { 
-        preload: path.join(__dirname, 'preload.js'), 
-        contextIsolation: true,
-        webSecurity: false 
-    }
-  });
-  win.loadFile('index.html');
-}
-
 // macOS specific: handle double-clicking the .photoslib package
 app.on('open-file', (event, path) => {
     event.preventDefault();
