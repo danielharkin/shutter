@@ -108,6 +108,7 @@ document.getElementById('btn-add-library').onclick = async () => {
 
 // Listener for a new 'btn-create-library' (add this ID to your HTML)
 document.getElementById('btn-create-library').onclick = async () => {
+    console.log("Create button clicked"); // Add this to verify the click works
     const result = await window.api.createLibrary();
     if (result.success) {
         alert("Library Created and Loaded Successfully!");

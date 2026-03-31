@@ -94,3 +94,5 @@ async function generateLibrary(sourceDir, outputLibPath, progressCallback) {
     db.close();
     await exiftool.end();
 }
+
+module.exports = { generateLibrary }; // <--- Essential for main.js to use it

@@ -20,4 +20,3 @@ contextBridge.exposeInMainWorld('api', {
     createLibrary: () => ipcRenderer.invoke('create-library'),
     onGenerationProgress: (callback) => ipcRenderer.on('library-generation-progress', (event, data) => callback(data))
 });
-});

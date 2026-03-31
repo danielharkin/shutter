@@ -5,6 +5,7 @@ const fs = require('fs');
 const express = require('express');
 const { exiftool } = require('exiftool-vendored');
 
+
 // CONFIGURATION
 let DB_PATH;
 let PHOTO_ROOT;
@@ -200,7 +201,6 @@ ipcMain.handle('get-detailed-metadata', async (event, relativePath) => {
 });
 
 app.whenReady().then(() => {
-    // Check if a path was passed via terminal
     const args = process.argv;
     const libPath = args.find(a => a.endsWith('.photoslib'));
     if (libPath) {
@@ -209,6 +209,10 @@ app.whenReady().then(() => {
     createWindow();
 });
 
+app.on('window-all-closed', () => { 
+    if (process.platform !== 'darwin') app.quit(); 
+});
 
-
-app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
