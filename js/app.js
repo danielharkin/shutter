@@ -106,3 +106,21 @@ document.getElementById('btn-add-library').onclick = async () => {
     }
 };
 
+// Listener for a new 'btn-create-library' (add this ID to your HTML)
+document.getElementById('btn-create-library').onclick = async () => {
+    const result = await window.api.createLibrary();
+    if (result.success) {
+        alert("Library Created and Loaded Successfully!");
+        initApp();
+    }
+};
+
+// Handle real-time progress updates
+window.api.onGenerationProgress((data) => {
+    const statusEl = document.getElementById('generation-status'); // Create this element in HTML
+    if (statusEl) {
+        const percent = Math.round((data.current / data.total) * 100);
+        statusEl.innerText = `Generating Library: ${data.current} / ${data.total} (${percent}%)`;
+    }
+});
+

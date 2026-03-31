@@ -98,6 +98,45 @@ const ext = path.extname(fullPath).toLowerCase();
 mediaApp.listen(3999, '127.0.0.1');
 
 // IPC HANDLERS
+
+ipcMain.handle('create-library', async (event) => {
+    // 1. Pick Source Folder (Read-Only)
+    const source = await dialog.showOpenDialog({
+        title: "Select Photo Source Folder (Read-Only)",
+        properties: ['openDirectory']
+    });
+    if (source.canceled) return { success: false };
+
+    // 2. Pick Destination Folder for the new .photoslib
+    const dest = await dialog.showSaveDialog({
+        title: "Create New Shutter Library",
+        defaultPath: "MyNewLibrary.photoslib",
+        buttonLabel: "Create Library"
+    });
+    if (dest.canceled) return { success: false };
+
+    const sourceDir = source.filePaths[0];
+    const outputLib = dest.filePath;
+
+    // Start the generator (calling your new file)
+    const { generateLibrary } = require('./library-generator');
+    
+    try {
+        await generateLibrary(sourceDir, outputLib, (current, total) => {
+            // Send progress updates back to the UI
+            event.sender.send('library-generation-progress', { current, total });
+        });
+        
+        // Auto-load the new library upon completion
+        const success = loadLibrary(outputLib);
+        return { success, path: outputLib };
+    } catch (err) {
+        console.error("Library Generation Failed:", err);
+        return { success: false, error: err.message };
+    }
+});
+
+
 ipcMain.handle('reveal-in-finder', (event, relPath) => {
     const fullPath = path.join(PHOTO_ROOT, decodeURIComponent(relPath));
     shell.showItemInFolder(fullPath);
