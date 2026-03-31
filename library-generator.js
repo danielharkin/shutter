@@ -18,9 +18,6 @@ function getFilesRecursively(dir, baseDir, fileList = []) {
     return fileList;
 }
 
-// Inside your generateLibrary function:
-const allFiles = getFilesRecursively(sourceDir, sourceDir);
-
 // Helper to find all files in your source directory
 function getFilesRecursively(dir, baseDir, fileList = []) {
     const files = fs.readdirSync(dir);
@@ -41,6 +38,8 @@ async function generateLibrary(sourceDir, outputLibPath, progressCallback) {
     if (!fs.existsSync(outputLibPath)) fs.mkdirSync(outputLibPath);
     const dbPath = path.join(outputLibPath, 'archive.db');
     const db = new sqlite3.Database(dbPath);
+    const allFiles = getFilesRecursively(sourceDir, sourceDir);
+
 
     await new Promise(res => {
         db.serialize(() => {
@@ -63,7 +62,6 @@ async function generateLibrary(sourceDir, outputLibPath, progressCallback) {
         });
     });
 
-    const allFiles = getFilesRecursively(sourceDir, sourceDir);
     let processed = 0;
 
     for (const relPath of allFiles) {

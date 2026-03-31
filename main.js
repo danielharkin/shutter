@@ -32,7 +32,6 @@ function loadLibrary(libraryPath) {
             db.get("SELECT value FROM config WHERE key = 'photo_root'", (err, row) => {
                 if (row) {
                     PHOTO_ROOT = row.value;
-                    console.log("Loaded PHOTO_ROOT from DB:", PHOTO_ROOT);
                 }
             });
         }
