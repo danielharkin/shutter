@@ -27,6 +27,7 @@ function loadLibrary(libraryPath) {
         db.run('PRAGMA journal_mode = WAL;');
         db.run('PRAGMA cache_size = -20000;'); 
         DB_PATH = dbFile;
+        addToHistory(libraryPath); // Add this line here
 
         // Support for Phased/Robust Libraries (Database Config)
         // We use a promise here to ensure PHOTO_ROOT is set before the UI asks for assets
@@ -39,13 +40,6 @@ function loadLibrary(libraryPath) {
                 PHOTO_ROOT = path.isAbsolute(rawPath) ? rawPath : path.resolve(libraryPath, rawPath);
             }
         });
-
-        return true;
-    } catch (e) {
-        console.error("Failed to load library files:", e);
-        return false;
-    }
-}
 
 
 // MEDIA SERVER (Express)
@@ -209,8 +203,21 @@ ipcMain.handle('get-assets', (event, folder) => {
 
 ipcMain.handle('get-detailed-metadata', async (event, relativePath) => {
     const fullPath = path.join(PHOTO_ROOT, relativePath);
-    // exiftool-vendored is used here for an ad-hoc, non-indexed read
     return await exiftool.read(fullPath);
+});
+
+function addToHistory(libPath) {
+    try {
+        let history = store.get('libraryHistory') || [];
+        history = [libPath, ...history.filter(p => p !== libPath)].slice(0, 5);
+        store.set('libraryHistory', history);
+    } catch (e) {
+        console.error("History store failed:", e);
+    }
+}
+
+ipcMain.handle('get-library-history', () => {
+    return store.get('libraryHistory') || [];
 });
 
 app.whenReady().then(() => {
@@ -229,16 +236,3 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
-
-function addToHistory(libPath) {
-    let history = store.get('libraryHistory') || [];
-    // Filter out duplicates and keep the most recent 5
-    history = [libPath, ...history.filter(p => p !== libPath)].slice(0, 5);
-    store.set('libraryHistory', history);
-}
-
-// UPDATE: Inside your loadLibrary function, add this line at the very end of the 'try' block:
-// addToHistory(libraryPath);
-
-// ADD: New IPC handler for the frontend to fetch this list
-ipcMain.handle('get-library-history', () => store.get('libraryHistory') || []);

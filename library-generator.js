@@ -33,6 +33,8 @@ async function generateLibrary(sourceDir, outputLibPath, progressCallback) {
                 is_live INTEGER DEFAULT 0, vid_path TEXT
             )`);
             db.run('CREATE INDEX idx_path ON assets(rel_path)');
+            db.run('CREATE INDEX idx_date ON assets(date)');
+            db.run('CREATE INDEX idx_category ON assets(category)');
             res();
         });
     });
@@ -83,7 +85,6 @@ async function generateLibrary(sourceDir, outputLibPath, progressCallback) {
         WHERE (rel_path LIKE '%.jpg' OR rel_path LIKE '%.heic')`, res));
 
     db.close();
-    await exiftool.end();
 }
 
 module.exports = { generateLibrary };
