@@ -15,7 +15,7 @@ contextBridge.exposeInMainWorld('api', {
     revealInFinder: (path) => ipcRenderer.invoke('reveal-in-finder', path),
 
     // 4. Database Operations
-    updateAsset: (id, data) => ipcRenderer.invoke('update-asset', id, data)
+    updateAsset: (id, data) => ipcRenderer.invoke('update-asset', id, data),
 
     createLibrary: () => ipcRenderer.invoke('create-library'),
     onGenerationProgress: (callback) => ipcRenderer.on('library-generation-progress', (event, data) => callback(data))

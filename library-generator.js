@@ -3,6 +3,24 @@ const { exiftool } = require('exiftool-vendored');
 const path = require('path');
 const fs = require('fs');
 
+// Add this helper function at the top of library-generator.js
+function getFilesRecursively(dir, baseDir, fileList = []) {
+    const files = fs.readdirSync(dir);
+    for (const file of files) {
+        const fullPath = path.join(dir, file);
+        if (fs.statSync(fullPath).isDirectory()) {
+            getFilesRecursively(fullPath, baseDir, fileList);
+        } else {
+            // Add relative path so the library remains portable
+            fileList.push(path.relative(baseDir, fullPath));
+        }
+    }
+    return fileList;
+}
+
+// Inside your generateLibrary function:
+const allFiles = getFilesRecursively(sourceDir, sourceDir);
+
 // Helper to find all files in your source directory
 function getFilesRecursively(dir, baseDir, fileList = []) {
     const files = fs.readdirSync(dir);
@@ -17,6 +35,7 @@ function getFilesRecursively(dir, baseDir, fileList = []) {
     }
     return fileList;
 }
+
 
 async function generateLibrary(sourceDir, outputLibPath, progressCallback) {
     if (!fs.existsSync(outputLibPath)) fs.mkdirSync(outputLibPath);
