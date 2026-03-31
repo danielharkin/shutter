@@ -35,11 +35,15 @@ function loadLibrary(libraryPath) {
         }
 
         // 2. Then update/override from DB config if present
-        db.get("SELECT value FROM config WHERE key = 'photo_root'", (err, row) => {
-            if (row) PHOTO_ROOT = row.value;
+db.get("SELECT value FROM config WHERE key = 'photo_root'", (err, row) => {
+            if (row) {
+                PHOTO_ROOT = row.value;
+            } else if (fs.existsSync(pathFile)) {
+                const rawPath = fs.readFileSync(pathFile, 'utf8').trim();
+                PHOTO_ROOT = path.isAbsolute(rawPath) ? rawPath : path.resolve(libraryPath, rawPath);
+            }
         });
-
-        return true; // Return true here, once the DB connection is initiated
+        return true;
     } catch (err) {
         console.error("Failed to load library:", err);
         return false;
@@ -123,12 +127,13 @@ ipcMain.handle('create-library', async (event) => {
     });
     if (dest.canceled) return { success: false };
 
-    // Use existing variable names without 'const' if they are global, 
-    // or keep 'const' here and remove them from the top of the file.
     const selectedSourceDir = source.filePaths[0]; 
     const selectedOutputLib = dest.filePath;
 
     try {
+        // Use dynamic import to load the generator module asynchronously
+        const { generateLibrary } = await import('./library-generator.js');
+
         await generateLibrary(selectedSourceDir, selectedOutputLib, (data) => {
             event.sender.send('library-generation-progress', data);
         });
