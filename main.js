@@ -87,6 +87,11 @@ mediaApp.use('/media', (req, res) => {
     if (!PHOTO_ROOT) return res.status(404).send("No library loaded");
     const relPath = decodeURIComponent(req.path.substring(1));
     const fullPath = path.join(PHOTO_ROOT, relPath);
+const ext = path.extname(fullPath).toLowerCase();
+    if (['.mov', '.mp4'].includes(ext)) {
+        res.setHeader('Content-Type', 'video/mp4');
+        res.setHeader('Accept-Ranges', 'bytes');
+    }
     res.sendFile(fullPath);
 });
 

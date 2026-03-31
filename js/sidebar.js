@@ -32,7 +32,10 @@ async function hydrateSidebar(a) {
     // Use vid_path if it's a Live Photo, otherwise standard path
     const activePath = a.is_live === 1 ? a.vid_path : a.path;
 
-    const mediaUrl = isHeic 
+// Check if the file we are actually pointing to is a video
+    const isActuallyVid = activePath.toLowerCase().endsWith('.mov') || activePath.toLowerCase().endsWith('.mp4');
+
+    const mediaUrl = (isHeic && !isActuallyVid)
         ? `http://127.0.0.1:3999/thumb/${encodeURIComponent(activePath)}` 
         : `http://127.0.0.1:3999/media/${encodeURIComponent(activePath)}`;
 
