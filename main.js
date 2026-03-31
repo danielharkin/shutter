@@ -15,25 +15,33 @@ function loadLibrary(libraryPath) {
     const dbFile = path.join(libraryPath, 'archive.db');
     const pathFile = path.join(libraryPath, 'path.txt');
 
-    if (fs.existsSync(dbFile) && fs.existsSync(pathFile)) {
-        try {
-            // Read the path from the library package
+    if (!fs.existsSync(dbFile)) return false;
+
+    try {
+        if (db) db.close();
+        db = new sqlite3.Database(dbFile);
+        db.run('PRAGMA journal_mode = WAL;');
+        db.run('PRAGMA cache_size = -20000;');
+        DB_PATH = dbFile;
+
+        // 1. Check for the legacy path.txt file first
+        if (fs.existsSync(pathFile)) {
             const rawPath = fs.readFileSync(pathFile, 'utf8').trim();
             PHOTO_ROOT = path.isAbsolute(rawPath) ? rawPath : path.resolve(libraryPath, rawPath);
-            
-            // Close existing database if switching libraries
-            if (db) db.close();
-            db = new sqlite3.Database(dbFile);
-            db.run('PRAGMA journal_mode = WAL;');
-            db.run('PRAGMA cache_size = -20000;'); // 20MB cache
-            DB_PATH = dbFile;
-            return true;
-        } catch (e) {
-            console.error("Failed to load library files:", e);
-            return false;
+        } else {
+            // 2. If no path.txt, fetch the root from the new config table
+            db.get("SELECT value FROM config WHERE key = 'photo_root'", (err, row) => {
+                if (row) {
+                    PHOTO_ROOT = row.value;
+                    console.log("Loaded PHOTO_ROOT from DB:", PHOTO_ROOT);
+                }
+            });
         }
+        return true;
+    } catch (e) {
+        console.error("Failed to load library files:", e);
+        return false;
     }
-    return false;
 }
 
 
@@ -179,10 +187,9 @@ ipcMain.handle('get-full-exif', async (event, relPath) => {
 });
 
 ipcMain.handle('get-years', () => {
-  // Return an empty array if no database is connected yet
   if (!db) return []; 
-  
-  return new Promise(res => db.all("SELECT year as y, COUNT(*) as c FROM assets WHERE year IS NOT NULL GROUP BY year ORDER BY year ASC", (e, r) => res(r || [])));
+  // This extracts the top-level folder name from the relative path
+  return new Promise(res => db.all("SELECT SUBSTR(rel_path, 1, INSTR(rel_path, '/') - 1) as y, COUNT(*) as c FROM assets GROUP BY y", (e, r) => res(r || [])));
 });
 
 // REPLACE your 'get-assets' handler in main.js with this:
