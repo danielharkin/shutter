@@ -105,3 +105,4 @@ document.getElementById('btn-add-library').onclick = async () => {
         alert("Selected folder is not a valid .photoslib (missing archive.db or path.txt)");
     }
 };
+

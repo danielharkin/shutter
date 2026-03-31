@@ -23,6 +23,8 @@ function loadLibrary(libraryPath) {
             // Close existing database if switching libraries
             if (db) db.close();
             db = new sqlite3.Database(dbFile);
+            db.run('PRAGMA journal_mode = WAL;');
+            db.run('PRAGMA cache_size = -20000;'); // 20MB cache
             DB_PATH = dbFile;
             return true;
         } catch (e) {
@@ -56,27 +58,6 @@ function createWindow() {
   win.loadFile('index.html');
 }
 
-function loadLibrary(libraryPath) {
-    const dbFile = path.join(libraryPath, 'archive.db');
-    const pathFile = path.join(libraryPath, 'path.txt');
-
-    if (fs.existsSync(dbFile) && fs.existsSync(pathFile)) {
-        // Read the path.txt from the specific library clicked
-        const rawPath = fs.readFileSync(pathFile, 'utf8').trim();
-        
-        // If the path in path.txt is relative, resolve it based on the library location
-        PHOTO_ROOT = path.isAbsolute(rawPath) 
-            ? rawPath 
-            : path.resolve(libraryPath, rawPath);
-
-        // Close old DB if switching libraries mid-session
-        if (db) db.close();
-        db = new sqlite3.Database(dbFile);
-        return true;
-    }
-    return false;
-}
-
 app.on('open-file', (event, path) => {
     event.preventDefault();
     if (loadLibrary(path)) {
@@ -99,6 +80,25 @@ mediaApp.use('/thumb', async (req, res) => {
             res.sendFile(fullPath);
         }
     } catch (e) { res.status(404).send(); }
+});
+
+ipcMain.handle('mount-portable-library', async (event, libraryPath) => {
+    const pathTxtPath = path.join(libraryPath, 'path.txt');
+    const dbPath = path.join(libraryPath, 'archive.db');
+
+    if (fs.existsSync(pathTxtPath) && fs.existsSync(dbPath)) {
+        const newRoot = fs.readFileSync(pathTxtPath, 'utf8').trim();
+        
+        // Update the global PHOTO_ROOT for the Express server
+        PHOTO_ROOT = newRoot; 
+        
+        // Close existing DB before re-assigning
+        if (db) db.close();
+        db = new sqlite3.Database(dbPath);
+
+        return { success: true, photoRoot: newRoot };
+    }
+    return { success: false, error: 'Invalid .photoslib structure' };
 });
 
 // Dynamic media handler to support library switching
@@ -192,6 +192,12 @@ ipcMain.handle('get-assets', (event, folder) => {
     ? "SELECT * FROM assets ORDER BY date DESC" 
     : "SELECT * FROM assets WHERE year = ? ORDER BY date DESC";
   return new Promise(res => db.all(sql, folder === 'all' ? [] : [folder], (e, r) => res(r || [])));
+});
+
+ipcMain.handle('get-detailed-metadata', async (event, relativePath) => {
+    const fullPath = path.join(PHOTO_ROOT, relativePath);
+    // exiftool-vendored is used here for an ad-hoc, non-indexed read
+    return await exiftool.read(fullPath);
 });
 
 app.whenReady().then(() => {
