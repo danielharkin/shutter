@@ -15,27 +15,56 @@
     <div id="top-safe"></div>
     
 <div id="sidebar">
-    <div class="sidebar-section">
-        <div class="section-label">LIBRARIES</div>
-        <div id="library-history-list" class="library-controls">
-            </div>
-        <div class="library-controls">
-            <button id="btn-add-library" class="nav-item"><span>📂 Open Library</span></button>
-            <button id="btn-create-library" class="nav-item"><span>➕ Create New</span></button>
+
+    <!-- ── LIBRARY HEADER ── -->
+    <div class="sidebar-header-row">
+        <span class="sidebar-section-title">LIBRARY</span>
+        <div class="sidebar-header-actions">
+            <button id="btn-create-library" class="icon-btn" title="Create New Library">+</button>
+            <button id="btn-add-library"    class="icon-btn" title="Open Library">&#128193;</button>
         </div>
-        <div id="generation-status" class="status-text"></div>
     </div>
 
-    <div class="sidebar-section">
-        <div id="folder-list"></div>
+    <!-- ── ACTIVE LIBRARY CARD ── -->
+    <div id="library-card" class="library-card" style="display:none">
+        <div class="library-card-row" id="library-card-toggle">
+            <span id="library-card-name" class="library-card-name"></span>
+            <div id="library-traffic-lights" class="traffic-lights">
+                <span class="tl-dot" id="tl-structure" title="File structure"></span>
+                <span class="tl-dot" id="tl-metadata"  title="Location & date metadata"></span>
+                <span class="tl-dot" id="tl-live"      title="Live photo pairing"></span>
+                <span class="tl-dot" id="tl-types"     title="Type classification"></span>
+            </div>
+        </div>
+        <div id="library-phase-detail" class="library-phase-detail" style="display:none">
+            <div class="phase-row" id="prow-structure">
+                <span class="phase-row-label">File Structure</span>
+                <span class="phase-row-status" id="pstat-structure"></span>
+            </div>
+            <div class="phase-row" id="prow-metadata">
+                <span class="phase-row-label">Location &amp; Dates</span>
+                <span class="phase-row-status" id="pstat-metadata"></span>
+            </div>
+            <div class="phase-row" id="prow-live">
+                <span class="phase-row-label">Live Photos</span>
+                <span class="phase-row-status" id="pstat-live"></span>
+            </div>
+            <div class="phase-row" id="prow-types">
+                <span class="phase-row-label">Type Classification</span>
+                <span class="phase-row-status" id="pstat-types"></span>
+            </div>
+        </div>
     </div>
-</div>
 
+    <!-- ── NO LIBRARY PLACEHOLDER ── -->
+    <div id="library-empty" class="library-empty">No library loaded</div>
 
-    <div class="sidebar-section">
-        <div class="section-label">FOLDERS</div>
-        <div id="folder-list"></div>
+    <!-- ── FOLDERS HEADER + LIST ── -->
+    <div class="sidebar-header-row" style="margin-top:16px">
+        <span class="sidebar-section-title">FOLDERS</span>
     </div>
+    <div id="folder-list"></div>
+
 </div>
 
     <div id="main">

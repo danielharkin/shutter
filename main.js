@@ -5,7 +5,7 @@ const fs = require('fs');
 const express = require('express');
 const { exiftool } = require('exiftool-vendored');
 const Store = require('electron-store');
-const store = new Store.default();
+const store = new Store.default({ projectName: 'shutter' });
 const { generateLibrary } = require('./library-generator');
 
 
@@ -130,16 +130,17 @@ ipcMain.handle('create-library', async (event) => {
     const selectedSourceDir = source.filePaths[0]; 
     const selectedOutputLib = dest.filePath;
 
+    const libraryName = path.basename(selectedOutputLib).replace('.photoslib', '');
     try {
-        // Use dynamic import to load the generator module asynchronously
-        const { generateLibrary } = await import('./library-generator.js');
-
         await generateLibrary(selectedSourceDir, selectedOutputLib, (data) => {
-            event.sender.send('library-generation-progress', data);
+            // On structure complete: load the library so the DB is ready before the UI asks for data
+            if (data.phase === 'structure' && data.status === 'complete') {
+                loadLibrary(selectedOutputLib);
+            }
+            event.sender.send('library-generation-progress', { ...data, libraryName });
         });
-        
-        const success = loadLibrary(selectedOutputLib);
-        return { success, path: selectedOutputLib };
+        event.sender.send('library-generation-progress', { phase: 'complete', status: 'complete' });
+        return { success: true, path: selectedOutputLib };
     } catch (err) {
         console.error("Library Generation Failed:", err);
         return { success: false, error: err.message };
@@ -195,12 +196,10 @@ ipcMain.handle('get-years', () => {
   ));
 });
 
-// REPLACE your 'get-assets' handler in main.js with this:
 ipcMain.handle('get-assets', (event, folder) => {
-  // Removed the restriction on is_live so the frontend 'Live' toggle can work
-  const sql = folder === 'all' 
-    ? "SELECT * FROM assets ORDER BY date DESC" 
-    : "SELECT * FROM assets WHERE year = ? ORDER BY date DESC";
+  const sql = folder === 'all'
+    ? "SELECT *, rel_path as path FROM assets ORDER BY date DESC"
+    : "SELECT *, rel_path as path FROM assets WHERE category = ? ORDER BY date DESC";
   return new Promise(res => db.all(sql, folder === 'all' ? [] : [folder], (e, r) => res(r || [])));
 });
 

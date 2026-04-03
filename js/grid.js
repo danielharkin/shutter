@@ -41,30 +41,24 @@ export function initGrid() {
 export function applyFilters() {
     const { rawAssets, filters } = state;
 
-    state.filteredAssets = rawAssets.filter(a => {
-        // Exit early if there is nothing to filter
     if (!rawAssets || rawAssets.length === 0) {
         document.getElementById('grid').innerHTML = '<div style="padding: 40px; color: #555; text-align: center; font-weight: 900;">DRAG A .PHOTOSLIB FOLDER HERE TO START</div>';
+        state.filteredAssets = [];
+        buildScrubber();
         return;
     }
-    
-        // 1. Direct Category Mapping
-        if (a.category === 'screenshot') return filters.screenshot;
-        if (a.category === 'selfie') return filters.selfie;
+
+    state.filteredAssets = rawAssets.filter(a => {
+        // 1. Semantic type flags
+        if (a.type === 'screenshot') return filters.screenshot;
+        if (a.type === 'selfie')     return filters.selfie;
 
         // 2. Live Photos
         if (a.is_live === 1 || a.is_live === -1) return filters.live;
 
-        // 3. Videos & Shorts
-        if (a.category === 'video') {
-            let seconds = 0;
-            if (a.duration) {
-                const parts = a.duration.split(':').map(Number);
-                seconds = parts.length === 3 
-                    ? (parts[0] * 3600) + (parts[1] * 60) + parts[2] 
-                    : (parts[0] * 60) + parts[1];
-            }
-            if (seconds > 0 && seconds < 5) return filters.shorts;
+        // 3. Videos & Shorts (duration stored as raw seconds)
+        if (a.type === 'video') {
+            if (a.duration > 0 && a.duration < 5) return filters.shorts;
             return filters.video;
         }
 

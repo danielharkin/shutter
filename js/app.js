@@ -3,18 +3,73 @@ import { initGrid, applyFilters } from './grid.js';
 import { initMap } from './map.js';
 import { initSidebar } from './sidebar.js';
 
+// ── Library card helpers ────────────────────────────────────────────────────
+
+// Phase config: id suffix, traffic-light dot id, label
+const PHASES = [
+    { key: 'structure', dotId: 'tl-structure', rowId: 'prow-structure', statId: 'pstat-structure', label: 'File Structure' },
+    { key: 'metadata',  dotId: 'tl-metadata',  rowId: 'prow-metadata',  statId: 'pstat-metadata',  label: 'Location & Dates' },
+    { key: 'live',      dotId: 'tl-live',       rowId: 'prow-live',      statId: 'pstat-live',      label: 'Live Photos' },
+    { key: 'types',     dotId: 'tl-types',      rowId: 'prow-types',     statId: 'pstat-types',     label: 'Types' },
+];
+
+// Map generator phase names → PHASES index
+const PHASE_KEY_MAP = { structure: 0, metadata: 1, live_photos: 2, types: 3 };
+
+function setPhaseState(idx, state) {
+    const p = PHASES[idx];
+    // Traffic light dot
+    const dot = document.getElementById(p.dotId);
+    if (dot) { dot.className = `tl-dot ${state}`; }
+    // Phase row
+    const row = document.getElementById(p.rowId);
+    if (row) {
+        row.className = `phase-row ${state}`;
+        const stat = document.getElementById(p.statId);
+        if (stat) {
+            stat.textContent = state === 'done' ? '✓ Done'
+                             : state === 'active' ? 'Indexing…'
+                             : '—';
+        }
+    }
+}
+
+function setPhaseProgress(idx, pct) {
+    const p = PHASES[idx];
+    const dot = document.getElementById(p.dotId);
+    if (dot) dot.className = 'tl-dot active';
+    const row = document.getElementById(p.rowId);
+    if (row) {
+        row.className = 'phase-row active';
+        const stat = document.getElementById(p.statId);
+        if (stat) stat.textContent = `${pct}%`;
+    }
+}
+
+function showLibraryCard(name) {
+    document.getElementById('library-empty').style.display = 'none';
+    const card = document.getElementById('library-card');
+    card.style.display = 'block';
+    document.getElementById('library-card-name').textContent = name;
+    // Reset all dots/rows to pending
+    PHASES.forEach((_, i) => setPhaseState(i, 'pending'));
+}
+
+// Toggle phase detail on card click
+document.getElementById('library-card-toggle').addEventListener('click', () => {
+    const detail = document.getElementById('library-phase-detail');
+    detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
+});
+
+// ── App init ────────────────────────────────────────────────────────────────
+
 async function initApp() {
-    renderLibraryHistory();
-    window.state = state; 
+    window.state = state;
 
     const rows = await window.api.getYears();
     const list = document.getElementById('folder-list');
-    
-    // 1. Clear existing list to prevent duplicates on library switch
-    list.innerHTML = ''; 
+    list.innerHTML = '';
 
-    // 2. Initial Setup for Grid and Map (Always run these once)
-    // We move these up so the UI components are ready even if empty
     if (!window.gridInitialized) {
         initGrid();
         initMap();
@@ -22,62 +77,42 @@ async function initApp() {
         window.gridInitialized = true;
     }
 
-    // 3. Early Exit if no database is connected
     if (!rows || rows.length === 0) {
         console.log("No library data. Waiting for .photoslib drop.");
-        return; 
+        return;
     }
 
-    const createBtn = (label, year, count) => {
+    // Show the library card with the name from history (first entry = current)
+    const history = await window.api.getLibraryHistory?.() || [];
+    if (history.length > 0) {
+        const name = history[0].split('/').pop().replace('.photoslib', '');
+        showLibraryCard(name);
+        // Mark all phases done for a library that's already fully indexed
+        PHASES.forEach((_, i) => setPhaseState(i, 'done'));
+    }
+
+    const createBtn = (label, folder, count) => {
         const btn = document.createElement('button');
-        btn.className = 'nav-item' + (year === 'all' ? ' active' : '');
+        btn.className = 'nav-item' + (folder === 'all' ? ' active' : '');
         btn.innerHTML = `<span>${label}</span><span>${count}</span>`;
         btn.onclick = async () => {
             document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            state.currentYear = year;
-            state.rawAssets = await window.api.getAssets(year);
+            state.currentYear = folder;
+            state.rawAssets = await window.api.getAssets(folder);
             applyFilters();
         };
         list.appendChild(btn);
     };
 
-    
-
-    // 4. Populate UI now that data exists
     createBtn('All Photos', 'all', '-');
     rows.forEach(r => createBtn(r.y, r.y, r.c.toLocaleString()));
 
     state.rawAssets = await window.api.getAssets('all');
     applyFilters();
-
-    ///5. Add History Logic to the UI
-
-    async function renderLibraryHistory() {
-    // Note: This requires 'getLibraryHistory' to be added to your preload/main (Step 5)
-    const history = await window.api.getLibraryHistory?.() || [];
-    const container = document.getElementById('library-history-list');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    history.forEach(libPath => {
-        const btn = document.createElement('button');
-        btn.className = 'nav-item recent-lib';
-        const name = libPath.split('/').pop().replace('.photoslib', '');
-        btn.innerHTML = `<span>📖 ${name}</span>`;
-        
-        btn.onclick = async () => {
-            const success = await window.api.loadLibrary(libPath);
-            if (success) initApp();
-        };
-        container.appendChild(btn);
-    });
 }
 
-// Ensure you add renderLibraryHistory() to the top of your initApp() function.
-}
-
-
+// ── Button wiring ───────────────────────────────────────────────────────────
 
 document.getElementById('btn-toggle-split').onclick = () => {
     state.isSplit = !state.isSplit;
@@ -90,76 +125,66 @@ document.querySelectorAll('#filter-bar .btn-pill').forEach(btn => {
         const type = btn.dataset.type;
         state.filters[type] = !state.filters[type];
         btn.classList.toggle('active', state.filters[type]);
-        console.log(`Toggled ${type} to ${state.filters[type]}`); // Diagnostic log
         applyFilters();
     };
 });
 
-
-initApp();
-
-
-window.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    e.stopPropagation(); // Prevent browser from just opening the folder
-    dz.style.display = 'none';
-    
-    // Electron provides the 'path' property on the file object
-    const file = e.dataTransfer.files[0];
-    if (file) {
-        console.log("Attempting to load library at:", file.path); // LOG FOR DEBUGGING
-        
-        if (file.path.endsWith('.photoslib')) {
-            const success = await window.api.loadLibrary(file.path);
-            if (success) {
-                console.log("Library loaded successfully. Reloading UI...");
-                initApp(); // Re-run the initialization
-            } else {
-                alert("Backend failed to load library. Check archive.db and path.txt.");
-            }
-        } else {
-            alert("Please drop a folder ending in .photoslib");
-        }
-    }
-});
-
-
-
 document.getElementById('btn-add-library').onclick = async () => {
     const result = await window.api.selectLibrary();
     if (result.success) {
-        // Re-run the app initialization with the new data
-        initApp(); 
+        initApp();
     } else if (result.path) {
         alert("Selected folder is not a valid .photoslib (missing archive.db or path.txt)");
     }
 };
 
-// Listener for a new 'btn-create-library' (add this ID to your HTML)
 document.getElementById('btn-create-library').onclick = async () => {
-    console.log("Create button clicked"); // Add this to verify the click works
-    const result = await window.api.createLibrary();
-    if (result.success) {
-        alert("Library Created and Loaded Successfully!");
-        initApp();
-    }
+    await window.api.createLibrary();
 };
 
-// Handle real-time progress updates with Phased Loading
-window.api.onGenerationProgress((data) => {
-    const statusEl = document.getElementById('generation-status');
-    if (!statusEl) return;
+// ── Drag and drop ───────────────────────────────────────────────────────────
 
-    if (data.phase === 'discovery_complete') {
-        // TRIGGER INSTANT LOAD: Phase 1 is done, folders are in the DB
-        statusEl.innerText = "Folders discovered! Loading UI...";
-        initApp(); 
-    } else if (data.phase === 'enriching') {
-        // BACKGROUND PROGRESS: Phase 2 is running
-        const percent = Math.round((data.current / data.total) * 100);
-        statusEl.innerText = `Enriching Metadata: ${percent}% (${data.current.toLocaleString()} / ${data.total.toLocaleString()})`;
-    } else if (data.phase === 'complete') {
-        statusEl.innerText = "Library generation complete.";
-        setTimeout(() => { statusEl.innerText = ""; }, 5000);
+window.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const dz = document.getElementById('dropzone');
+    if (dz) dz.style.display = 'none';
+    const file = e.dataTransfer.files[0];
+    if (file && file.path.endsWith('.photoslib')) {
+        const success = await window.api.loadLibrary(file.path);
+        if (success) initApp();
+        else alert("Backend failed to load library. Check archive.db and path.txt.");
+    } else {
+        alert("Please drop a folder ending in .photoslib");
     }
 });
+
+// ── Generation progress → phase card ───────────────────────────────────────
+
+window.api.onGenerationProgress((data) => {
+    const { phase, status, current, total, libraryName } = data;
+
+    // First event: show the card
+    if (libraryName) showLibraryCard(libraryName);
+
+    const idx = PHASE_KEY_MAP[phase];
+    if (idx === undefined) return;
+
+    if (status === 'progress') {
+        const pct = total ? Math.round((current / total) * 100) : 0;
+        setPhaseProgress(idx, pct);
+    } else if (status === 'complete') {
+        setPhaseState(idx, 'done');
+    }
+
+    // Structure done → load the grid immediately
+    if (phase === 'structure' && status === 'complete') {
+        initApp();
+        // Mark remaining phases as active so user can see work is ongoing
+        setPhaseState(1, 'active');
+    }
+});
+
+// ── Boot ────────────────────────────────────────────────────────────────────
+
+initApp();

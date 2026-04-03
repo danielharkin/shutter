@@ -229,37 +229,131 @@ details summary:hover { color: var(--accent); }
     z-index: 100002; 
 }
 
-.sidebar-section {
-    margin-bottom: 24px;
-    padding: 0 10px;
+/* ── Sidebar structural elements ───────────────────────── */
+.sidebar-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px 6px;
 }
 
-.section-label {
-    padding: 10px 10px;
+.sidebar-section-title {
     font-size: 10px;
-    color: #555;
-    letter-spacing: 2px;
     font-weight: 900;
+    letter-spacing: 2px;
+    color: #555;
     text-transform: uppercase;
 }
 
-.library-controls {
+.sidebar-header-actions {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    gap: 4px;
 }
 
-.status-text {
-    padding: 10px;
-    font-size: 11px;
-    color: var(--accent);
-    font-style: italic;
-    line-height: 1.4;
+.icon-btn {
+    background: transparent;
+    border: 1px solid #2a2a2a;
+    color: #777;
+    border-radius: 5px;
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+}
+.icon-btn:hover { background: #1e1e1e; color: #ccc; }
+
+/* ── Active library card ───────────────────────────────── */
+.library-card {
+    margin: 0 10px 4px;
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
-#generation-status:empty { display: none; }
+.library-card-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    cursor: pointer;
+    user-select: none;
+}
+.library-card-row:hover { background: rgba(255,255,255,0.03); }
 
-.recent-lib span {
-    opacity: 0.7;
+.library-card-name {
     font-size: 13px;
+    font-weight: 600;
+    color: #ddd;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    margin-right: 8px;
+}
+
+/* Traffic light dots */
+.traffic-lights {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.tl-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #333;
+    transition: background 0.25s;
+}
+.tl-dot.pending  { background: #333; }
+.tl-dot.active   { background: var(--amber); box-shadow: 0 0 4px var(--amber); }
+.tl-dot.done     { background: var(--green); }
+
+/* Expanded phase detail */
+.library-phase-detail {
+    border-top: 1px solid #1e1e1e;
+}
+
+.phase-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 12px;
+    border-bottom: 1px solid #1a1a1a;
+}
+.phase-row:last-child { border-bottom: none; }
+
+.phase-row-label {
+    font-size: 11px;
+    color: #666;
+}
+
+.phase-row-status {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.phase-row.pending  .phase-row-label,
+.phase-row.pending  .phase-row-status { color: #444; }
+
+.phase-row.active   .phase-row-label { color: #aaa; }
+.phase-row.active   .phase-row-status { color: var(--amber); }
+
+.phase-row.done     .phase-row-label { color: #888; }
+.phase-row.done     .phase-row-status { color: var(--green); }
+
+/* Empty state */
+.library-empty {
+    margin: 6px 14px;
+    font-size: 12px;
+    color: #444;
+    font-style: italic;
 }
