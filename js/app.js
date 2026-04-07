@@ -5,7 +5,6 @@ import { initSidebar } from './sidebar.js';
 
 // ── Library card helpers ────────────────────────────────────────────────────
 
-// Phase config: id suffix, traffic-light dot id, label
 const PHASES = [
     { key: 'structure', dotId: 'tl-structure', rowId: 'prow-structure', statId: 'pstat-structure', label: 'File Structure' },
     { key: 'metadata',  dotId: 'tl-metadata',  rowId: 'prow-metadata',  statId: 'pstat-metadata',  label: 'Location & Dates' },
@@ -13,22 +12,19 @@ const PHASES = [
     { key: 'types',     dotId: 'tl-types',      rowId: 'prow-types',     statId: 'pstat-types',     label: 'Types' },
 ];
 
-// Map generator phase names → PHASES index
 const PHASE_KEY_MAP = { structure: 0, metadata: 1, live_photos: 2, types: 3 };
 
-function setPhaseState(idx, state) {
+function setPhaseState(idx, phaseState) {
     const p = PHASES[idx];
-    // Traffic light dot
     const dot = document.getElementById(p.dotId);
-    if (dot) { dot.className = `tl-dot ${state}`; }
-    // Phase row
+    if (dot) { dot.className = `tl-dot ${phaseState}`; }
     const row = document.getElementById(p.rowId);
     if (row) {
-        row.className = `phase-row ${state}`;
+        row.className = `phase-row ${phaseState}`;
         const stat = document.getElementById(p.statId);
         if (stat) {
-            stat.textContent = state === 'done' ? '✓ Done'
-                             : state === 'active' ? 'Indexing…'
+            stat.textContent = phaseState === 'done' ? '✓ Done'
+                             : phaseState === 'active' ? 'Indexing…'
                              : '—';
         }
     }
@@ -51,62 +47,229 @@ function showLibraryCard(name) {
     const card = document.getElementById('library-card');
     card.style.display = 'block';
     document.getElementById('library-card-name').textContent = name;
-    // Reset all dots/rows to pending
     PHASES.forEach((_, i) => setPhaseState(i, 'pending'));
 }
 
-// Toggle phase detail on card click
-document.getElementById('library-card-toggle').addEventListener('click', () => {
+async function populateLibraryDropdown() {
+    const dropdown = document.getElementById('library-dropdown');
+    dropdown.innerHTML = '';
+    const history = await window.api.getLibraryHistory();
+    if (!history || history.length === 0) {
+        dropdown.innerHTML = '<div class="library-dropdown-empty">No recent libraries</div>';
+        return;
+    }
+    history.forEach(libPath => {
+        const name = libPath.split('/').pop().replace('.photoslib', '');
+        const item = document.createElement('div');
+        item.className = 'library-dropdown-item';
+        item.textContent = name;
+        item.title = libPath;
+        item.addEventListener('click', async () => {
+            dropdown.style.display = 'none';
+            const success = await window.api.loadLibrary(libPath);
+            if (success) {
+                showLibraryCard(name);
+                PHASES.forEach((_, i) => setPhaseState(i, 'done'));
+                await initApp();
+            }
+        });
+        dropdown.appendChild(item);
+    });
+}
+
+document.getElementById('library-card-name').addEventListener('click', async () => {
+    const dropdown = document.getElementById('library-dropdown');
+    const isVisible = dropdown.style.display !== 'none';
+    if (!isVisible) {
+        await populateLibraryDropdown();
+        dropdown.style.display = 'block';
+    } else {
+        dropdown.style.display = 'none';
+    }
+});
+
+document.getElementById('library-traffic-lights').addEventListener('click', () => {
     const detail = document.getElementById('library-phase-detail');
     detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
 });
+
+document.getElementById('btn-rebuild-library').addEventListener('click', async () => {
+    document.getElementById('library-phase-detail');
+    PHASES.forEach((_, i) => setPhaseState(i, 'pending'));
+    await window.api.rebuildLibrary();
+});
+
+// ── Folder tree ─────────────────────────────────────────────────────────────
+
+function buildTree(rows) {
+    // rows = [{folder: "2023/January", count: 20}, ...]
+    // Events only have leaf-level rows — year nodes ("2023") may not exist in the DB.
+    // We synthesise virtual parent nodes for every missing ancestor.
+    const nodes = {};
+
+    const ensure = (folderPath) => {
+        if (nodes[folderPath]) return;
+        nodes[folderPath] = {
+            name: folderPath.split('/').pop(),
+            path: folderPath,
+            count: 0,
+            totalCount: 0,
+            children: [],
+        };
+    };
+
+    for (const { folder, count } of rows) {
+        if (!folder) continue;
+        ensure(folder);
+        nodes[folder].count = count;
+        nodes[folder].totalCount = count;
+
+        // Ensure every ancestor path exists as a virtual node
+        const parts = folder.split('/');
+        for (let i = 1; i < parts.length; i++) {
+            ensure(parts.slice(0, i).join('/'));
+        }
+    }
+
+    const roots = [];
+    for (const folder of Object.keys(nodes).sort()) {
+        const parts = folder.split('/');
+        if (parts.length === 1) {
+            roots.push(nodes[folder]);
+        } else {
+            const parentPath = parts.slice(0, -1).join('/');
+            nodes[parentPath].children.push(nodes[folder]);
+        }
+    }
+
+    function computeTotal(node) {
+        for (const child of node.children) {
+            computeTotal(child);
+            node.totalCount += child.totalCount;
+        }
+        node.children.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    roots.forEach(computeTotal);
+    roots.sort((a, b) => a.name.localeCompare(b.name));
+
+    return roots;
+}
+
+function renderTreeNode(node, depth = 0) {
+    const li = document.createElement('li');
+    li.className = 'tree-node';
+
+    const row = document.createElement('div');
+    row.className = 'tree-row';
+    row.style.paddingLeft = `${depth * 14 + 14}px`;
+
+    // Disclosure triangle or spacer
+    const toggle = document.createElement('span');
+    toggle.className = node.children.length ? 'tree-toggle' : 'tree-spacer';
+    toggle.textContent = node.children.length ? '▶' : '';
+    row.appendChild(toggle);
+
+    const label = document.createElement('span');
+    label.className = 'tree-label';
+    label.textContent = node.name;
+    row.appendChild(label);
+
+    const countEl = document.createElement('span');
+    countEl.className = 'tree-count';
+    countEl.textContent = node.totalCount.toLocaleString();
+    row.appendChild(countEl);
+
+    li.appendChild(row);
+
+    // Children list (hidden by default)
+    let childList = null;
+    if (node.children.length) {
+        childList = document.createElement('ul');
+        childList.className = 'tree-children';
+        childList.style.display = 'none';
+        for (const child of node.children) {
+            childList.appendChild(renderTreeNode(child, depth + 1));
+        }
+        li.appendChild(childList);
+
+        toggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const expanded = childList.style.display !== 'none';
+            childList.style.display = expanded ? 'none' : 'block';
+            toggle.textContent = expanded ? '▶' : '▼';
+        });
+    }
+
+    row.addEventListener('click', async () => {
+        clearActiveSelection();
+        row.classList.add('active');
+        state.currentFolder = node.path;
+        state.rawAssets = await window.api.getAssets(node.path);
+        applyFilters();
+    });
+
+    return li;
+}
+
+function initViewAll() {
+    const btn = document.getElementById('btn-view-all');
+    btn.addEventListener('click', async () => {
+        document.querySelectorAll('.tree-row.active, .nav-item.active').forEach(el => el.classList.remove('active'));
+        btn.classList.add('active');
+        state.currentFolder = 'all';
+        state.rawAssets = await window.api.getAssets('all');
+        applyFilters();
+    });
+}
+
+function clearActiveSelection() {
+    document.querySelectorAll('.tree-row.active, .nav-item.active').forEach(el => el.classList.remove('active'));
+}
+
+async function buildFolderList() {
+    const list = document.getElementById('folder-list');
+    list.innerHTML = '';
+
+    const rows = await window.api.getFolderTree();
+    if (!rows || rows.length === 0) return;
+
+    const treeRoots = buildTree(rows);
+    const ul = document.createElement('ul');
+    ul.className = 'tree-root';
+    for (const node of treeRoots) {
+        ul.appendChild(renderTreeNode(node, 0));
+    }
+    list.appendChild(ul);
+}
 
 // ── App init ────────────────────────────────────────────────────────────────
 
 async function initApp() {
     window.state = state;
 
-    const rows = await window.api.getYears();
-    const list = document.getElementById('folder-list');
-    list.innerHTML = '';
-
     if (!window.gridInitialized) {
         initGrid();
         initMap();
         initSidebar();
+        initViewAll();
         window.gridInitialized = true;
     }
 
+    const rows = await window.api.getYears();
     if (!rows || rows.length === 0) {
         console.log("No library data. Waiting for .photoslib drop.");
         return;
     }
 
-    // Show the library card with the name from history (first entry = current)
+    // Show library card for already-indexed library
     const history = await window.api.getLibraryHistory?.() || [];
     if (history.length > 0) {
         const name = history[0].split('/').pop().replace('.photoslib', '');
         showLibraryCard(name);
-        // Mark all phases done for a library that's already fully indexed
         PHASES.forEach((_, i) => setPhaseState(i, 'done'));
     }
 
-    const createBtn = (label, folder, count) => {
-        const btn = document.createElement('button');
-        btn.className = 'nav-item' + (folder === 'all' ? ' active' : '');
-        btn.innerHTML = `<span>${label}</span><span>${count}</span>`;
-        btn.onclick = async () => {
-            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            state.currentYear = folder;
-            state.rawAssets = await window.api.getAssets(folder);
-            applyFilters();
-        };
-        list.appendChild(btn);
-    };
-
-    createBtn('All Photos', 'all', '-');
-    rows.forEach(r => createBtn(r.y, r.y, r.c.toLocaleString()));
+    await buildFolderList();
 
     state.rawAssets = await window.api.getAssets('all');
     applyFilters();
@@ -164,7 +327,6 @@ window.addEventListener('drop', async (e) => {
 window.api.onGenerationProgress((data) => {
     const { phase, status, current, total, libraryName } = data;
 
-    // First event: show the card
     if (libraryName) showLibraryCard(libraryName);
 
     const idx = PHASE_KEY_MAP[phase];
@@ -177,11 +339,15 @@ window.api.onGenerationProgress((data) => {
         setPhaseState(idx, 'done');
     }
 
-    // Structure done → load the grid immediately
+    // Structure done → load the grid immediately, mark remaining as active
     if (phase === 'structure' && status === 'complete') {
         initApp();
-        // Mark remaining phases as active so user can see work is ongoing
         setPhaseState(1, 'active');
+    }
+
+    // All generation done → rebuild folder tree with final regrouped values
+    if (phase === 'complete' && status === 'complete') {
+        initApp();
     }
 });
 

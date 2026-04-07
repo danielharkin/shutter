@@ -2,7 +2,7 @@ export const state = {
     rawAssets: [],
     filteredAssets: [],
     selectedAsset: null,
-    currentYear: 'all',
+    currentFolder: 'all',
     isSplit: false,
     isDragMode: false,
     // ALL keys must be here for applyFilters to return 'true'

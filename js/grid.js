@@ -42,7 +42,7 @@ export function applyFilters() {
     const { rawAssets, filters } = state;
 
     if (!rawAssets || rawAssets.length === 0) {
-        document.getElementById('grid').innerHTML = '<div style="padding: 40px; color: #555; text-align: center; font-weight: 900;">DRAG A .PHOTOSLIB FOLDER HERE TO START</div>';
+        document.getElementById('grid').innerHTML = '<div style="padding: 40px; color: #555; text-align: center; font-weight: 900;">NO PHOTOS TO DISPLAY</div>';
         state.filteredAssets = [];
         buildScrubber();
         return;
@@ -109,18 +109,22 @@ export function hydrateMonth(container) {
         const gpsDot = (a.lat && a.lat !== 0) ? 'var(--green)' : 'var(--red)';
         const dateDot = (a.date && !a.date.startsWith('0000')) ? 'var(--green)' : 'var(--amber)';
         
+        const isVideo = a.type === 'video' || a.is_live === 1;
         div.innerHTML = `
             <div class="dots">
                 <div class="dot" style="background:${gpsDot}"></div>
                 <div class="dot" style="background:${dateDot}"></div>
             </div>
             ${badge ? `<div class="badge-label">${badge}</div>` : ''}
+            ${isVideo ? '<div class="video-placeholder">▶</div>' : ''}
             <img data-path="${a.path}" class="lazy">
         `;
+        const img = div.querySelector('.lazy');
+        img.onerror = () => img.style.display = 'none';
         div.onclick = () => updateSelected(a);
         div.ondblclick = () => openLightbox(a);
         tiler.appendChild(div);
-        obs.observe(div.querySelector('.lazy'));
+        obs.observe(img);
     });
 }
 
@@ -162,18 +166,17 @@ function buildScrubber() {
     scrubber.innerHTML = '';
     
     const years = [...new Set(state.filteredAssets.map(a => parseAssetDate(a.date).y))].sort((a,b) => b-a);
-    const activeFolderBtn = document.querySelector('.nav-item.active span');
-    const folderName = activeFolderBtn ? activeFolderBtn.innerText : '';
+    const currentFolder = state.currentFolder || 'all';
 
     years.forEach(year => {
         const yBtn = document.createElement('div');
         yBtn.className = 'scrub-year';
         yBtn.innerText = year;
-        
+
         const mList = document.createElement('div');
         mList.className = 'month-list';
 
-        if (years.length === 1 || folderName === year) {
+        if (years.length === 1 || currentFolder === year) {
             mList.classList.add('expanded');
             yBtn.classList.add('active');
         }

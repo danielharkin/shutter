@@ -20,9 +20,11 @@ contextBridge.exposeInMainWorld('api', {
     createLibrary: () => ipcRenderer.invoke('create-library'),
     onGenerationProgress: (callback) => ipcRenderer.on('library-generation-progress', (event, data) => callback(data)),
 
-    getLibraryHistory: () => ipcRenderer.invoke('get-library-history')
-
-
+    getLibraryHistory: () => ipcRenderer.invoke('get-library-history'),
+    getFolderTree:    () => ipcRenderer.invoke('get-folder-tree'),
+    openFile:         (path) => ipcRenderer.invoke('open-file', path),
+    rebuildLibrary:   () => ipcRenderer.invoke('rebuild-library'),
+    vlcStream:        (path) => ipcRenderer.invoke('vlc-stream', path),
 });
 
 //added comma

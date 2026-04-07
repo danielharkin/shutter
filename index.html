@@ -27,15 +27,19 @@
 
     <!-- ── ACTIVE LIBRARY CARD ── -->
     <div id="library-card" class="library-card" style="display:none">
-        <div class="library-card-row" id="library-card-toggle">
-            <span id="library-card-name" class="library-card-name"></span>
-            <div id="library-traffic-lights" class="traffic-lights">
+        <!-- Name row: click name to toggle recent-library dropdown, click dots to toggle phases -->
+        <div class="library-card-row">
+            <span id="library-card-name" class="library-card-name" id="library-name-toggle" title="Switch library"></span>
+            <div id="library-traffic-lights" class="traffic-lights" style="cursor:pointer" title="Show indexing phases">
                 <span class="tl-dot" id="tl-structure" title="File structure"></span>
                 <span class="tl-dot" id="tl-metadata"  title="Location & date metadata"></span>
                 <span class="tl-dot" id="tl-live"      title="Live photo pairing"></span>
                 <span class="tl-dot" id="tl-types"     title="Type classification"></span>
             </div>
         </div>
+        <!-- Recent libraries dropdown -->
+        <div id="library-dropdown" class="library-dropdown" style="display:none"></div>
+        <!-- Indexing phase detail -->
         <div id="library-phase-detail" class="library-phase-detail" style="display:none">
             <div class="phase-row" id="prow-structure">
                 <span class="phase-row-label">File Structure</span>
@@ -53,14 +57,20 @@
                 <span class="phase-row-label">Type Classification</span>
                 <span class="phase-row-status" id="pstat-types"></span>
             </div>
+            <button id="btn-rebuild-library" class="rebuild-btn">↺ Rebuild Index</button>
         </div>
     </div>
 
     <!-- ── NO LIBRARY PLACEHOLDER ── -->
     <div id="library-empty" class="library-empty">No library loaded</div>
 
+    <!-- ── VIEW ALL ── -->
+    <button id="btn-view-all" class="nav-item active" style="margin-top:8px">
+        <span>View All</span><span id="view-all-count">—</span>
+    </button>
+
     <!-- ── FOLDERS HEADER + LIST ── -->
-    <div class="sidebar-header-row" style="margin-top:16px">
+    <div class="sidebar-header-row" style="margin-top:8px">
         <span class="sidebar-section-title">FOLDERS</span>
     </div>
     <div id="folder-list"></div>
@@ -138,10 +148,13 @@
             
             <button class="btn-action">Update Database</button>
 
-            <div class="section-header">Metadata & File</div>
-            <details id="finder-details"><summary>Finder Details</summary><div id="finder-data"></div></details>
-            <details id="iptc-details"><summary>IPTC Data</summary><div id="iptc-data"></div></details>
-            <details id="exif-details"><summary>Full Details</summary><div id="full-exif"></div></details>
+            <div class="section-header">Metadata</div>
+            <details id="acc-exif"><summary>EXIF</summary><div id="data-exif"></div></details>
+            <details id="acc-iptc"><summary>IPTC</summary><div id="data-iptc"></div></details>
+            <details id="acc-quicktime"><summary>QuickTime / Video</summary><div id="data-quicktime"></div></details>
+            <details id="acc-xmp"><summary>XMP</summary><div id="data-xmp"></div></details>
+            <details id="acc-keywords"><summary>Keywords &amp; Tags</summary><div id="data-keywords"></div></details>
+            <details id="acc-file"><summary>File Details</summary><div id="data-file"></div></details>
         </div>
     </div>
 

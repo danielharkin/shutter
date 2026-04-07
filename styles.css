@@ -24,6 +24,9 @@ header { height: 60px; border-bottom: 1px solid var(--border); display: flex; al
 .item img { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.2s; z-index: 2; position: absolute; top:0; left:0; pointer-events: none; }
 .item img.loaded { opacity: 1; }
 
+.video-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 32px; color: #333; z-index: 1; pointer-events: none; }
+.item img.loaded ~ .video-placeholder { display: none; }
+
 .dots { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; z-index: 10; }
 .dot { width: 8px; height: 8px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.3); }
 .badge-label { position: absolute; bottom: 8px; left: 8px; font-size: 8px; background: rgba(0,0,0,0.8); padding: 3px 6px; border-radius: 4px; font-weight: 900; color: #fff; z-index: 10; text-transform: uppercase; display: flex; align-items: center; gap: 4px; }
@@ -295,7 +298,9 @@ details summary:hover { color: var(--accent); }
     text-overflow: ellipsis;
     flex: 1;
     margin-right: 8px;
+    cursor: pointer;
 }
+.library-card-name:hover { color: #fff; }
 
 /* Traffic light dots */
 .traffic-lights {
@@ -357,3 +362,93 @@ details summary:hover { color: var(--accent); }
     color: #444;
     font-style: italic;
 }
+
+/* ── Folder tree ───────────────────────────────────── */
+.tree-root, .tree-children {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.tree-node { display: block; }
+
+.tree-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 14px 7px 0;
+    cursor: pointer;
+    color: #555;
+    font-size: 13px;
+    border-left: 3px solid transparent;
+    user-select: none;
+}
+.tree-row:hover { background: #111; color: #888; }
+.tree-row.active { background: #1a1a1a; color: var(--accent); border-left-color: var(--accent); }
+
+.all-row { padding-left: 14px; }
+
+.tree-toggle {
+    font-size: 8px;
+    color: #444;
+    width: 10px;
+    flex-shrink: 0;
+    text-align: center;
+    line-height: 1;
+}
+.tree-spacer { width: 10px; flex-shrink: 0; }
+
+.tree-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.tree-count {
+    font-size: 11px;
+    color: #333;
+    flex-shrink: 0;
+    padding-right: 12px;
+}
+.tree-row.active .tree-count { color: var(--accent); opacity: 0.7; }
+
+/* ── Library dropdown ───────────────────────────────── */
+.library-dropdown {
+    border-top: 1px solid #1e1e1e;
+    background: #0a0a0a;
+}
+
+.library-dropdown-item {
+    padding: 9px 12px;
+    font-size: 12px;
+    color: #aaa;
+    cursor: pointer;
+    border-bottom: 1px solid #141414;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.library-dropdown-item:last-child { border-bottom: none; }
+.library-dropdown-item:hover { background: #161616; color: #fff; }
+
+.library-dropdown-empty {
+    padding: 9px 12px;
+    font-size: 11px;
+    color: #444;
+    font-style: italic;
+}
+
+/* ── Rebuild button ─────────────────────────────────── */
+.rebuild-btn {
+    display: block;
+    width: calc(100% - 24px);
+    margin: 8px 12px;
+    padding: 7px 0;
+    background: transparent;
+    border: 1px solid #2a2a2a;
+    border-radius: 5px;
+    color: #666;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-align: center;
+}
+.rebuild-btn:hover { background: #1a1a1a; color: #ccc; border-color: #444; }
